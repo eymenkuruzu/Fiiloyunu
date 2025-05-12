@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tahta Başı - Fiil Çekim Oyunu</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Schoolbell&display=swap');
+        
+        body {
+            font-family: 'Schoolbell', cursive;
+            background: url('https://img.freepik.com/free-vector/hand-drawn-school-background_23-2149464866.jpg') center/cover;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: #333;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .blackboard {
+            background: #0a3200;
+            border: 15px ridge #5d4037;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            color: #f1f1f1;
+            position: relative;
+        }
+
+        .blackboard::before {
+            content: "";
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            border: 2px dashed rgba(255,255,255,0.1);
+            pointer-events: none;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            font-size: 2.5rem;
+            margin-top: 0;
+            text-decoration: underline;
+            text-decoration-style: wavy;
+        }
+
+        .game-area {
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .verb-form {
+            margin: 25px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-left: 5px solid #ffd54f;
+        }
+
+        input {
+            font-family: 'Schoolbell', cursive;
+            font-size: 1.3rem;
+            padding: 8px;
+            background: rgba(255,255,255,0.8);
+            border: 3px dashed #5d4037;
+            margin: 5px;
+            text-align: center;
+            width: 200px;
+        }
+
+        button {
+            background: #ffd54f;
+            color: #0a3200;
+            border: none;
+            padding: 12px 25px;
+            font-family: 'Schoolbell', cursive;
+            font-size: 1.3rem;
+            margin: 15px;
+            cursor: pointer;
+            border-radius: 30px;
+            box-shadow: 0 4px 0 #5d4037;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #5d4037;
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background: #ffd54f;
+            color: #0a3200;
+            padding: 10px 15px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .chalk-effect {
+            color: #fff;
+            text-shadow: 
+                0 0 5px rgba(255,255,255,0.5),
+                2px 2px 1px rgba(0,0,0,0.3);
+            letter-spacing: 1px;
+        }
+
+        .feedback {
+            min-height: 30px;
+            font-size: 1.4rem;
+            margin: 15px 0;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .correct {
+            color: #a5d6a7;
+        }
+
+        .incorrect {
+            color: #ef9a9a;
+            text-decoration: line-through;
+        }
+
+        .answer {
+            color: #ffd54f;
+        }
+
+        .sound-toggle {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="blackboard">
+        <div class="sound-toggle" id="sound-btn">🔊</div>
+        <div class="score">0</div>
+        <h1 class="chalk-effect">FİİL ÇEKİM OYUNU</h1>
+        
+        <div class="game-area">
+            <div class="verb-form chalk-effect">
+                <div id="base-verb">Yükleniyor...</div>
+            </div>
+            
+            <div>
+                <input type="text" id="past-input" placeholder="2. Hali (Past)">
+                <input type="text" id="participle-input" placeholder="3. Hali (Participle)">
+            </div>
+            
+            <button id="check-btn">Kontrol Et</button>
+            <button id="next-btn" style="display:none;">Sonraki Fiil</button>
+            
+            <div id="feedback" class="feedback chalk-effect"></div>
+        </div>
+    </div>
+
+    <script>
+        // Tüm fiiller (awake - write arası tam liste)
+        const verbs = [
+            {base: "awake", past: "awoke", participle: "awoken", tr: "uyanmak"},
+            {base: "be", past: "was/were", participle: "been", tr: "olmak"},
+            {base: "beat", past: "beat", participle: "beaten", tr: "vurmak"},
+            {base: "become", past: "became", participle: "become", tr: "olmak"},
+            {base: "begin", past: "began", participle: "begun", tr: "başlamak"},
+            {base: "bend", past: "bent", participle: "bent", tr: "bükmek"},
+            {base: "bet", past: "bet", participle: "bet", tr: "bahse girmek"},
+            {base: "bid", past: "bid", participle: "bid", tr: "emretmek"},
+            {base: "bite", past: "bit", participle: "bitten", tr: "ısırmak"},
+            {base: "blow", past: "blew", participle: "blown", tr: "esmek"},
+            {base: "break", past: "broke", participle: "broken", tr: "kırmak"},
+            {base: "bring", past: "brought", participle: "brought", tr: "getirmek"},
+            {base: "broadcast", past: "broadcast", participle: "broadcast", tr: "yayımlamak"},
+            {base: "build", past: "built", participle: "built", tr: "inşa etmek"},
+            {base: "burst", past: "burst", participle: "burst", tr: "patlamak"},
+            {base: "burn", past: "burned/burnt", participle: "burned/burnt", tr: "yakmak"},
+            {base: "buy", past: "bought", participle: "bought", tr: "satın almak"},
+            {base: "catch", past: "caught", participle: "caught", tr: "yakalamak"},
+            {base: "choose", past: "chose", participle: "chosen", tr: "seçmek"},
+            {base: "come", past: "came", participle: "come", tr: "gelmek"},
+            {base: "cost", past: "cost", participle: "cost", tr: "değer biçmek"},
+            {base: "creep", past: "crept", participle: "crept", tr: "emeklemek"},
+            {base: "cut", past: "cut", participle: "cut", tr: "kesmek"},
+            {base: "deal", past: "dealt", participle: "dealt", tr: "anlaşmak"},
+            {base: "dig", past: "dug", participle: "dug", tr: "kazmak"},
+            {base: "do", past: "did", participle: "done", tr: "yapmak"},
+            {base: "draw", past: "drew", participle: "drawn", tr: "çizmek, çekmek"},
+            {base: "dream", past: "dreamed/dreamt", participle: "dreamed/dreamt", tr: "rüya görmek"},
+            {base: "drive", past: "drove", participle: "driven", tr: "sürmek"},
+            {base: "drink", past: "drank", participle: "drunk", tr: "içmek"},
+            {base: "eat", past: "ate", participle: "eaten", tr: "yemek"},
+            {base: "fall", past: "fell", participle: "fallen", tr: "düşmek"},
+            {base: "feed", past: "fed", participle: "fed", tr: "beslemek"},
+            {base: "feel", past: "felt", participle: "felt", tr: "hissetmek"},
+            {base: "fight", past: "fought", participle: "fought", tr: "dövüşmek"},
+            {base: "find", past: "found", participle: "found", tr: "bulmak"},
+            {base: "flee", past: "fled", participle: "fled", tr: "firar etmek"},
+            {base: "fly", past: "flew", participle: "flown", tr: "uçmak"},
+            {base: "forbid", past: "forbade", participle: "forbidden", tr: "yasaklamak"},
+            {base: "forget", past: "forgot", participle: "forgotten", tr: "unutmak"},
+            {base: "forgive", past: "forgave", participle: "forgiven", tr: "affetmek"},
+            {base: "freeze", past: "froze", participle: "frozen", tr: "donmak"},
+            {base: "get", past: "got", participle: "gotten", tr: "elde etmek"},
+            {base: "give", past: "gave", participle: "given", tr: "vermek"},
+            {base: "go", past: "went", participle: "gone", tr: "gitmek"},
+            {base: "grow", past: "grew", participle: "grown", tr: "büyümek"},
+            {base: "hang", past: "hung", participle: "hung", tr: "asmak"},
+            {base: "have", past: "had", participle: "had", tr: "sahip olmak"},
+            {base: "hear", past: "heard", participle: "heard", tr: "duymak"},
+            {base: "hide", past: "hid", participle: "hidden", tr: "saklamak"},
+            {base: "hit", past: "hit", participle: "hit", tr: "vurmak"},
+            {base: "hold", past: "held", participle: "held", tr: "tutmak"},
+            {base: "hurt", past: "hurt", participle: "hurt", tr: "incitmek"},
+            {base: "keep", past: "kept", participle: "kept", tr: "saklamak"},
+            {base: "know", past: "knew", participle: "known", tr: "bilmek"},
+            {base: "lay", past: "laid", participle: "laid", tr: "sermek, yaymak"},
+            {base: "lead", past: "led", participle: "led", tr: "rehberlik etmek"},
+            {base: "learn", past: "learned/learnt", participle: "learned/learnt", tr: "öğrenmek"},
+            {base: "leave", past: "left", participle: "left", tr: "ayrılmak"},
+            {base: "lend", past: "lent", participle: "lent", tr: "ödünç vermek"},
+            {base: "let", past: "let", participle: "let", tr: "izin vermek"},
+            {base: "lie", past: "lay", participle: "lain", tr: "uzanmak"},
+            {base: "lose", past: "lost", participle: "lost", tr: "kaybetmek"},
+            {base: "make", past: "made", participle: "made", tr: "yapmak"},
+            {base: "mean", past: "meant", participle: "meant", tr: "anlamına gelmek"},
+            {base: "meet", past: "met", participle: "met", tr: "buluşmak"},
+            {base: "pay", past: "paid", participle: "paid", tr: "ödemek"},
+            {base: "put", past: "put", participle: "put", tr: "koymak"},
+            {base: "read", past: "read", participle: "read", tr: "okumak"},
+            {base: "ride", past: "rode", participle: "ridden", tr: "binmek"},
+            {base: "ring", past: "rang", participle: "rung", tr: "çalmak"},
+            {base: "rise", past: "rose", participle: "risen", tr: "yükselmek"},
+            {base: "run", past: "ran", participle: "run", tr: "koşmak"},
+            {base: "say", past: "said", participle: "said", tr: "söylemek"},
+            {base: "see", past: "saw", participle: "seen", tr: "görmek"},
+            {base: "sell", past: "sold", participle: "sold", tr: "satmak"},
+            {base: "send", past: "sent", participle: "sent", tr: "göndermek"},
+            {base: "show", past: "showed", participle: "shown", tr: "göstermek"},
+            {base: "shut", past: "shut", participle: "shut", tr: "kapatmak"},
+            {base: "sing", past: "sang", participle: "sung", tr: "şarkı söylemek"},
+            {base: "sit", past: "sat", participle: "sat", tr: "oturmak"},
+            {base: "sleep", past: "slept", participle: "slept", tr: "uyumak"},
+            {base: "speak", past: "spoke", participle: "spoken", tr: "konuşmak"},
+            {base: "spend", past: "spent", participle: "spent", tr: "harcamak"},
+            {base: "stand", past: "stood", participle: "stood", tr: "ayakta durmak"},
+            {base: "swim", past: "swam", participle: "swum", tr: "yüzmek"},
+            {base: "take", past: "took", participle: "taken", tr: "al mak"},
+            {base: "teach", past: "taught", participle: "taught", tr: "öğretmek"},
+            {base: "tear", past: "tore", participle: "torn", tr: "yırtmak"},
+            {base: "tell", past: "told", participle: "told", tr: "anlatmak"},
+            {base: "think", past: "thought", participle: "thought", tr: "düşünmek"},
+            {base: "throw", past: "threw", participle: "thrown", tr: "fırlatmak"},
+            {base: "understand", past: "understood", participle: "understood", tr: "anlamak"},
+            {base: "wake", past: "woke", participle: "woken", tr: "uyanmak"},
+            {base: "wear", past: "wore", participle: "worn", tr: "giymek"},
+            {base: "win", past: "won", participle: "won", tr: "kazanmak"},
+            {base: "write", past: "wrote", participle: "written", tr: "yazmak"}
+        ];
+
+        // Ses efektleri
+        const sounds = {
+            correct: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3'),
+            wrong: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3'),
+            next: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-plastic-interface-click-1107.mp3'),
+            victory: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3')
+        };
+
+        // Oyun değişkenleri
+        let currentVerb;
+        let score = 0;
+        let wrongAnswers = [];
+        let soundEnabled = true;
+
+        // DOM elementleri
+        const baseVerbEl = document.getElementById('base-verb');
+        const pastInput = document.getElementById('past-input');
+        const participleInput = document.getElementById('participle-input');
+        const checkBtn = document.getElementById('check-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const feedbackEl = document.getElementById('feedback');
+        const scoreEl = document.querySelector('.score');
+        const soundBtn = document.getElementById('sound-btn');
+
+        // Ses çalma fonksiyonu
+        function playSound(type) {
+            if (soundEnabled) {
+                sounds[type].currentTime = 0;
+                sounds[type].play();
+            }
+        }
+
+        // Ses aç/kapa
+        soundBtn.addEventListener('click', function() {
+            soundEnabled = !soundEnabled;
+            this.textContent = soundEnabled ? "🔊" : "🔇";
+            if (soundEnabled) playSound('next');
+        });
+
+        // Rastgele fiil seç
+        function getRandomVerb() {
+            return verbs[Math.floor(Math.random() * verbs.length)];
+        }
+
+        // Oyunu başlat
+        function startGame() {
+            currentVerb = getRandomVerb();
+            baseVerbEl.innerHTML = `<span style="color:#ffd54f">${currentVerb.base}</span> (${currentVerb.tr})`;
+            pastInput.value = '';
+            participleInput.value = '';
+            feedbackEl.innerHTML = '';
+            pastInput.focus();
+            nextBtn.style.display = 'none';
+            checkBtn.style.display = 'inline-block';
+            playSound('next');
+        }
+
+        // Kontrol etme fonksiyonu
+        function checkAnswers() {
+            const userPast = pastInput.value.trim().toLowerCase();
+            const userParticiple = participleInput.value.trim().toLowerCase();
+            const correctPast = currentVerb.past.toLowerCase();
+            const correctParticiple = currentVerb.participle.toLowerCase();
+            
+            // Çoğul/tekil durumlar için esneklik (was/were)
+            const pastOptions = correctPast.includes('/') ? 
+                correctPast.split('/') : [correctPast];
+            
+            const isPastCorrect = pastOptions.some(opt => opt === userPast);
+            const isParticipleCorrect = userParticiple === correctParticiple;
+            
+            if (isPastCorrect && isParticipleCorrect) {
+                // Doğru cevap
+                score++;
+                scoreEl.textContent = score;
+                feedbackEl.innerHTML = `<span class="correct">✔ Doğru!</span>`;
+                playSound('correct');
+                
+                // 10 puanda özel efekt
+                if (score % 10 === 0) {
+                    playSound('victory');
+                    feedbackEl.innerHTML += `<br><span style="color:#ffd54f">🌟 ${score} puan! Harikasın!</span>`;
+                }
+            } else {
+                // Yanlış cevap
+                feedbackEl.innerHTML = `
+                    <span class="incorrect">✖ Yanlış!</span><br>
+                    Doğrusu: <span class="answer">${currentVerb.past} / ${currentVerb.participle}</span>
+                `;
+                playSound('wrong');
+                
+                // Yanlış cevaplanan fiilleri kaydet
+                wrongAnswers.push(currentVerb);
+            }
+            
+            checkBtn.style.display = 'none';
+            nextBtn.style.display = 'inline-block';
+        }
+
+        // Event listeners
+        checkBtn.addEventListener('click', checkAnswers);
+        nextBtn.addEventListener('click', startGame);
+        
+        // Input'larda Enter tuşu desteği
+        [pastInput, participleInput].forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    if (checkBtn.style.display !== 'none') {
+                        checkAnswers();
+                    } else {
+                        startGame();
+                    }
+                }
+            });
+        });
+
+        // Oyunu başlat
+        startGame();
+    </script>
+</body>
+</html>
